@@ -1,7 +1,7 @@
 Package: ssMutPA
 Type: Package
 Title: Single-Sample Mutation-Based Pathway Analysis
-Version: 0.1.1
+Version: 0.1.0
 Authors@R: c(person(given = "Junwei", family = "Han", email = "hanjunwei1981@163.com", role  = c("aut", "cre", "cph")),
              person(given = "Yalan", family = "He", role  = "aut"),
              person(given = "Qian", family = "Wang", role  = "aut"))
@@ -30,5 +30,5 @@ Suggests:
     qpdf,
     rmarkdown
 Depends: 
-    R (>= 4.0.0)
+    R (>= 3.5.0)
 VignetteBuilder: knitr

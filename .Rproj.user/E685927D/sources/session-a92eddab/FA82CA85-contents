@@ -1,0 +1,12 @@
+#获取非代谢通路的XML文件名
+NonMetabolicfilepath<-"E:/HYL/王倩/2.KEGG通路数据和子通路数据提取/数据/KEGG原始通路数据_2020_11下载/人类/hsa_nonmeta_xml/"
+NonMetabolicfilenames<-list.files(NonMetabolicfilepath)
+NonMetabolicxml<-getPathway(NonMetabolicfilepath,NonMetabolicfilenames)
+NonMetabolicGraph<-getNonMetabolicGraph(NonMetabolicxml)
+#plotGraph(NonMetabolicGraph[[1]])
+
+NonMetabolicUGraph<-getUGraph(NonMetabolicGraph)#转化成无向图
+metagl<-filterNode(NonMetabolicUGraph,nodeType=c("map"))
+simMeta<-simplifyGraph(metagl,nodeType="geneProduct")
+expMeta<-expandNode(simMeta)
+hsaNonMetadapathway<-mergeNode(expMeta)

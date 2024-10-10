@@ -1,0 +1,170 @@
+---
+title: "ssMutPA"
+author: "Yalan He,Qian Wang,Junwei Han"
+data: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ssMutPA}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ssMutPA)
+```
+# Introduction
+Single-sample pathway enrichment analysis is an effectively approach for identifying cancer subtypes and pathway biomarkers, which promotes the development of precision medicine. However, the existing approaches focused on gene expression data but neglected gene mutation information. Here, we proposed a novel single-sample mutation-based pathway analysis approach (ssMutPA) to infer individualized pathway activities by integrating somatic mutation data and the protein-protein interaction (PPI) network.For each sample, ssMutPA first uses local and global weighted strategies to evaluate the effects of network genes from mutations according to the network topology, and then calculates mutation-based pathway enrichment score (ssMutPES) to reflect the accumulated effect of mutations of each pathway.
+
+# MAF field requirements
+MAF files contain many fields ranging from chromosome names to cosmic annotations. However, most of the analysis in ssMutPA uses the following fields.
+
+- Mandatory fields:   
+  **Hugo_Symbol,**   
+  **Variant_Classification,**  
+  **Tumor_Sample_Barcode.** 
+  
+Complete specification of MAF files can be found on [NCI GDC documentation page](https://docs.gdc.cancer.gov/Data/File_Formats/MAF_Format/). 
+  
+# Installation
+```{r echo = TRUE, results = 'hide',eval=FALSE}
+install.packages("ssMutPA")
+library(ssMutPA)
+```
+
+# Overview of the package
+The **ssMutPA** package is a Bioinformatics tool to perform single-sample mutation-based pathway analysis. And **ssMutPA** functions can be categorized into mainly Analysis and Visualization modules. Each of these functions and a short description is summarized as shown below:   
+<br/>
+1.Obtain the gene mutation status matrix.  
+2.Calculate single-sample mutation-based pathway enrichment score.  
+3.Identification of cancer subtypes based on unsupervised spectral clustering algorithm.<br/>
+4.Visualization of results:   
+4.1 Plotting a heatmap with subtype labels.  
+4.2 Plotting the density ridges plot.  
+4.3 Plotting the Dot plot.<br/>
+4.4 Plotting a waterfall plot of a particular pathway.
+<br/>  
+
+## Obtain the gene mutation status matrix   
+We downloaded patients' somatic mutation data from the The Cancer Genome Atlas Program(TCGA) or other open-source databases in MAF format and converted MAF format data into a gene mutation status matrix, where each element indicates whether a gene is mutated or not in a sample. In this study, we only extract the non-silent somatic mutations (Missense_Mutation,Frame_Shift_Del,Frame_Shift_Ins,In_Frame_Del,Nonsense_Mutation,In_Frame_Ins,Splice_Site,Nonstop_Mutation,Translation_Start_Site) in protein-coding regions. The function **get_mut_status** in the **ssMutPA** package can implement the above process. Simulation data as an example, the command lines are as follows:  
+<br/>
+
+```{r warning=TRUE, paged.print=TRUE}
+#load the mutation annotation file
+mut_path <- system.file("extdata","mutation_data.Rdata",package = "ssMutPA")
+load(mut_path)
+#perform the function 'get_mut_status'
+mut_status<-get_mut_status(mutation_data,nonsynonymous=TRUE,TCGA=TRUE,mut_rate=0)
+#view the first five lines of mut_status matrix
+mut_status[1:5,1:5]
+```
+<br/>
+
+## Calculate the single-sample mutation-based pathway enrichment score.
+Firstly, we performed local weighted on the seed nodes. For a given seed node ($G_{i}$), there are two variables to characterize if any $G_{i}$ may be reinforced by the mutations of its neighbors: the number of mutation genes in the neighbors of $G_{i}$, designated as $X_{i}$, and the number of neighbors of $G_{i}$, designated as $M_{i}$. For a seed $G_{i}$ in the sample, if it play more important function in the disease progression, the number of mutation genes in its neighbors will be significantly larger than the expectation $E(X_{i})$, which can be calculated as:<br/>
+<br/>
+$$E(X_{i})=M_{i}K/N\tag{1}$$
+Thus, a rescaled form $X_{i}-E(X_{i})$ is proposed to quantify the important strength of $G_{i}$ in a sample,which was defined as local weight $W_{i}$ :
+
+$$w_{i}=X_{i}-E(X_{i})\tag{2}$$
+
+
+$$W_{i}=log_{α}(w_{i}I(w_{i})+α)\tag{3}$$
+where $I$ is an indicator function,if $w_{i}$ greater than 0,its value is equal to 1,otherwise equal to 0;and $α$ is a scalar base to guarantee the weight has a minimum value of 1, here we set $α$ as 2.
+
+Subsequently, we normalized the initial weights of all seeds in a sample to ensure that they sum to 1 and used the global propagation algorithm(Random Walk with Restart(RWR)) to predict probable influence of nodes in the network by seed nodes(mutation genes).The RWR formula is as follows: 
+<br/>
+<br/>
+###Random walk with restart
+$$p_{t+1}=(1-c)Ap_{t}+cp_{0}\tag{4}$$
+where$c$ is a certain probability of continuing the random walk or restarting from the restart set; $A$ is the column-normalized adjacency matrix of the PPI network; $p_{t}$ is a vector containing visiting probabilities of all nodes in the network at time point t; $p_{0}$ is the initial probability vector. 
+
+Finally, we constructed a gene list by ranking the genes according to the normalized global weight and calculated the degree of enrichment of genes contained in each pathway on the gene list based on the Kolmogorov-Smirnov statistic. The function **get_RWR_ES** in the **ssMutPA** package can accomplish all the processes mentioned above.
+<br/>
+
+```{r warning=TRUE, paged.print=TRUE}
+#Method of obtaining data
+data(mut_status)
+net_path <- system.file("extdata","ppi_network.Rdata",package = "ssMutPA")
+load(net_path)
+pathway_path<-system.file("extdata","kegg_323_gmt.Rdata",package = "ssMutPA")
+load(pathway_path)
+samp_name<-c("TCGA-32-1979-01A","TCGA-32-2494-01A")
+examp_data<-mut_status[,samp_name]
+#perform the function 'get_RWR_ES'
+Path_ES<-get_RWR_ES(examp_data,net_data=ppi_network,pathway_data=kegg_323_gmt,BC_Num=12436)
+#view the first six lines of pathway enrichment profile
+head(Path_ES)
+```
+<br/>
+
+## Identification of cancer subtypes based on unsupervised spectral clustering algorithm.
+The function **get_samp_class** can perform spectral clustering based on the ssMutPESs of characteristic pathways.
+
+<br/>
+
+```{r warning=TRUE, paged.print=TRUE}
+#Load sample mutation data
+surv_path <- system.file("extdata","sur.Rdata",package = "ssMutPA")
+load(surv_path)
+data(Path_ES)
+#Perform the function `get_samp_class`
+res<-get_samp_class(Path_ES,sur,seed_num=5,cox_pval=0.05,min.nc = 2,max.nc =5)
+#view the label of samples
+res$sample_class[1:10]
+```
+
+<br/>
+  
+## Visualization results
+(1) The function **get_heatmap** is used to draw a heatmap based on ssMutPES profiles.The command lines are as follows:  
+
+<br/>
+
+```{r fig.height=6, fig.width=8,warning=FALSE,results='hold'}
+#Load the data
+data(Path_ES,sample_class,Path_Name)
+#perform the function `get_heatmap`.
+get_heatmap(Path_ES,Path_name=Path_Name,samp_class=sample_class)
+```
+
+(2) The function **mountain_plot** is used to plot a graph to reflect the distribution of the ssMutPESs in different subtypes.   
+<br/>
+
+```{r fig.height=6, fig.width=8, warning=FALSE, results='hold'}
+#Get the data of ROC curve
+data(Path_ES,sample_class)
+#perform the function `mountain_plot`
+mountain_plot(data=Path_ES,sample_class=sample_class,Path_name=rownames(Path_ES)[c(12,20,74,103,113,123,138,151,188)])
+```
+<br/>
+
+(3) The function **dotplot** was used to draw a graph to reflect the univariate HRs and P-values of pathways in different cancer types.
+<br/>
+
+```{r fig.height=6, fig.width=8,warning=FALSE,results='hold'}
+#load the data
+data(dot_data)
+#perform the function `dotplot`.
+dotplot(dot_data)
+```
+
+(4) The function **Oncoplot** will generate a waterfall plot.
+<br/>
+
+```{r fig.height=4, fig.width=8,warning=FALSE,results='hold'}
+#load the data
+mut_path <- system.file("extdata","maffile.txt",package = "ssMutPA")
+maf<-maftools::read.maf(mut_path ,isTCGA = FALSE)
+pathway_path <- system.file("extdata","kegg_323_gmt.Rdata",package = "ssMutPA")
+load(pathway_path)
+data(samp_class_onco,mut_onco,sur_onco)
+#draw a waterfall plot
+Oncoplot(maf,samp_class_onco,sur_onco,mut_onco,kegg_323_gmt,"IL-17 signaling pathway")
+```

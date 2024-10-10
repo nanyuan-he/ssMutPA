@@ -1,0 +1,115 @@
+library(deconstructSigs)
+library(BSgenome)
+library(TCGAbiolinks)
+setwd("C:\\Users\\DELL\\Desktop\\mutational signature")
+####读入压缩文件
+#gz <- gzfile("C:\\Users\\DELL\\Desktop\\mutational signature\\TCGA-BRCA\\Simple_Nucleotide_Variation\\Masked_Somatic_Mutation\\0a413f41-553d-462b-a23b-292510393567\\21142011-281b-4f60-8018-5f86c831349a.wxs.aliquot_ensemble_masked.maf.gz",'rt')
+#data <- read.delim(gz,comment.char = "#",sep="\t")
+###查看可下载的数据类型
+data_type <- getGDCprojects()
+a <- substr(data_type$id,1,4)
+Cancer_type <- data_type$id[which(a%in%"TCGA")]
+####突变数据下载----
+for (i in 1:length(Cancer_type)) {
+  # 定义项目和样本ID
+  project <- Cancer_type[i]
+  # 查询并下载数据
+  query <- GDCquery(
+    project = project,
+    data.category = "Simple Nucleotide Variation",
+    data.type = "Masked Somatic Mutation"
+  )
+  GDCdownload(query,directory = "C:\\Users\\DELL\\Desktop\\mutational signature")
+  GDCprepare(query, save = TRUE,save.filename = paste0(Cancer_type[i],".Rdata"),
+             directory = "C:\\Users\\DELL\\Desktop\\mutational signature")
+}
+####Copy Number Variation数据下载####
+for (i in 1:length(Cancer_type)) {
+  # 定义项目和样本ID
+  project <- Cancer_type[i]
+  # 查询并下载数据
+  query <- GDCquery(
+    project = project,
+    data.category = "Copy Number Variation",
+    data.type = "Masked Copy Number Segment"
+  )
+  GDCdownload(query,directory = "E:\\HYL\\mutational signature\\TCGA_CNV")
+  test <- GDCprepare(query,directory = "E:\\HYL\\mutational signature\\TCGA_CNV")
+}
+
+####clinical数据下载####
+for (i in 1:length(Cancer_type)) {
+  # 定义项目和样本ID
+  project <- Cancer_type[i]
+  # 查询并下载数据
+  query <- GDCquery(
+    project = "TCGA-ACC", 
+    data.category = "Clinical",
+    data.type = "Clinical Supplement", 
+    data.format = "BCR Biotab"
+  )
+  GDCdownload(query,directory = "E:\\HYL\\mutational signature\\TCGA_CLINICAL")
+  test <- GDCprepare(query,directory = "E:\\HYL\\mutational signature\\TCGA_CLINICAL")
+}
+
+####mutational context提取----
+###bsg根据数据选择是hg19还是hg38,TCGA参考基因组是hg38
+ref_genome <- "BSgenome.Hsapiens.UCSC.hg38"
+library(ref_genome, character.only = TRUE)
+setwd("E:\\HYL\\mutational signature\\TCGA_data")
+a <- dir()
+for (i in 2:length(a)) {
+  print(a[i])
+  load(a[i])
+  mut_data <- data[,c("Tumor_Sample_Barcode",
+                      "Chromosome",
+                      "Start_Position",
+                      "Reference_Allele",
+                      "Tumor_Seq_Allele2")]
+  colnames(mut_data) <- c("Sample","chr","pos","ref","alt")
+  mut_signature<- mut.to.sigs.input(mut.ref =mut_data, sample.id = "Sample",
+                                 chr = "chr", pos ="pos", ref = "ref", alt = "alt", bsg = BSgenome.Hsapiens.UCSC.hg38)
+  cancer_name <- substr(a[i],6,(nchar(a[i])-6))
+  save(mut_signature,file = paste0("E:\\HYL\\mutational signature\\result_data\\mut_context\\",cancer_name,".Rdata"))
+  }
+
+####mutation_signature 矩阵提取----
+setwd("E:\\HYL\\mutational signature\\result_data\\mut_context")
+a<-dir()
+###特征背景数据读入，从COSMIC数据库中下载
+signatures.ref <- read.delim("E:\\HYL\\mutational signature\\COSMIC_v3.4_SBS_GRCh38.txt",
+                             header = T,row.names = 1)
+signatures.ref <- as.data.frame(t(signatures.ref))
+for (i in 3:length(a)) {
+  print(a[i])
+  load(a[i])
+  #rownames(mut_signature) <- substr(rownames(mut_signature),1,16)
+  sample_id <- as.data.frame(rownames(mut_signature))
+  clus <- makeCluster(6)
+  clusterExport(clus,"sample_id",envir = environment())
+  clusterExport(clus,"mut_signature",envir = environment())
+  clusterExport(clus,"signatures.ref",envir = environment())
+  clusterEvalQ(clus,library(deconstructSigs))
+  signature_all<-parApply(clus,sample_id, 1, function(x){
+    print(x)
+    signatures <- whichSignatures(tumor.ref = mut_signature,
+                                  signatures.ref = signatures.ref,
+                                  sample.id = x,
+                                  contexts.needed = TRUE,
+                                  signature.cutoff=0.06)
+    return(signatures)
+  })
+  stopCluster(clus)
+  names(signature_all) <- rownames(mut_signature)
+  signature_weig <- c()
+  for (j in 1:length(signature_all)) {
+    signature_weig <- rbind(signature_weig,signature_all[[j]][["weights"]])
+  }
+  save(signature_all,file = paste0("E:\\HYL\\mutational signature\\result_data\\signature_all\\",
+                                   substr(a[i],1,(nchar(a[i])-6)),"_signature_all.Rdata"))
+  save(signature_weig,file = paste0("E:\\HYL\\mutational signature\\result_data\\signature_weight\\",
+                                    substr(a[i],1,(nchar(a[i])-6)),"_signature_weig.Rdata"))
+}
+
+
+

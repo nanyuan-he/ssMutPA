@@ -1,0 +1,11 @@
+"0","#draw a waterfall plot
+Oncoplot(maf,samp_class_onco,sur_onco,mut_onco,kegg_323_gmt,""IL-17 signaling pathway"")
+"
+"1","--Possible FLAGS among top ten genes:
+"
+"1","  MUC16
+"
+"1","  TTN
+"
+"1","-Processing clinical data
+"

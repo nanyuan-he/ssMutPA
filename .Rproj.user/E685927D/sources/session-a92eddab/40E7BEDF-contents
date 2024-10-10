@@ -1,0 +1,19 @@
+library(dplyr)
+pwys <- KEGGREST::keggList("pathway", "hsa")
+kgmls <- vector("list",length(pwys))
+for (i in seq_along(kgmls)){
+  message(pwys[i])
+  pwy <- sub("^path:", "", names(pwys)[i])
+  kgml <- KEGGREST::keggGet(pwy, "kgml")
+  kgmls[[i]] <- kgml
+  if ((i %% 20) == 0){
+    Sys.sleep(20) ###避免网络请求过多被屏蔽
+  }
+}
+names(kgmls) <- sub("^path:", "", names(pwys))
+out.dir <- "E:\\HYL\\KEGG\\KEGG_XML_20241008\\hsa"
+dir.create(out.dir)
+for (n in names(kgmls)){
+  cat(kgmls[[n]], 
+      file = file.path(out.dir, paste(n, ".xml", sep = ""))) ###保存为 xml
+}

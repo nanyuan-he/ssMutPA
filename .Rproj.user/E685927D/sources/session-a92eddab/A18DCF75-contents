@@ -1,0 +1,8 @@
+mut_mat <- t(mut_signature)
+nmf_res <- extract_signatures(mut_mat,rank = 2)
+test3<- c()
+for (i in 1:nrow(signatures.ref)) {
+ res<-cor(test2[,1], as.numeric(signatures.ref[i,]), method = "spearman") 
+ test3<- c(test3,res)
+}
+names(test3) <- rownames(signatures.ref)

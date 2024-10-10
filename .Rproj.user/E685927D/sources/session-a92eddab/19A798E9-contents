@@ -1,0 +1,298 @@
+library(deconstructSigs)
+library(BSgenome)
+library(TCGAbiolinks)
+library(parallel)
+setwd("C:\\Users\\DELL\\Desktop\\mutational signature")
+####读入压缩文件
+#gz <- gzfile("C:\\Users\\DELL\\Desktop\\mutational signature\\TCGA-BRCA\\Simple_Nucleotide_Variation\\Masked_Somatic_Mutation\\0a413f41-553d-462b-a23b-292510393567\\21142011-281b-4f60-8018-5f86c831349a.wxs.aliquot_ensemble_masked.maf.gz",'rt')
+#data <- read.delim(gz,comment.char = "#",sep="\t")
+###查看可下载的数据类型
+data_type <- getGDCprojects()
+a <- substr(data_type$id,1,4)
+Cancer_type <- data_type$id[which(a%in%"TCGA")]
+####TCGA####
+######突变数据下载----
+for (i in 1:length(Cancer_type)) {
+  # 定义项目和样本ID
+  project <- Cancer_type[i]
+  # 查询并下载数据
+  query <- GDCquery(
+    project = project,
+    data.category = "Simple Nucleotide Variation",
+    data.type = "Masked Somatic Mutation"
+  )
+  GDCdownload(query,directory = "C:\\Users\\DELL\\Desktop\\mutational signature")
+  GDCprepare(query, save = TRUE,save.filename = paste0(Cancer_type[i],".Rdata"),
+             directory = "C:\\Users\\DELL\\Desktop\\mutational signature")
+}
+######Copy Number Variation数据下载####
+for (i in 1:length(Cancer_type)) {
+  # 定义项目和样本ID
+  project <- Cancer_type[i]
+  # 查询并下载数据
+  query <- GDCquery(
+    project = project,
+    data.category = "Copy Number Variation",
+    data.type = "Masked Copy Number Segment"
+  )
+  GDCdownload(query,directory = "E:\\HYL\\mutational signature\\TCGA_CNV")
+  test <- GDCprepare(query,directory = "E:\\HYL\\mutational signature\\TCGA_CNV")
+}
+
+
+######mutational context提取----
+###bsg根据数据选择是hg19还是hg38,TCGA参考基因组是hg38
+ref_genome <- "BSgenome.Hsapiens.UCSC.hg38"
+library(ref_genome, character.only = TRUE)
+setwd("E:\\HYL\\mutational signature\\TCGA_data")
+a <- dir()
+for (i in 2:length(a)) {
+  print(a[i])
+  load(a[i])
+  mut_data <- data[,c("Tumor_Sample_Barcode",
+                      "Chromosome",
+                      "Start_Position",
+                      "Reference_Allele",
+                      "Tumor_Seq_Allele2")]
+  colnames(mut_data) <- c("Sample","chr","pos","ref","alt")
+  mut_signature<- mut.to.sigs.input(mut.ref =mut_data, sample.id = "Sample",
+                                 chr = "chr", pos ="pos", ref = "ref", alt = "alt", bsg = BSgenome.Hsapiens.UCSC.hg38)
+  cancer_name <- substr(a[i],6,(nchar(a[i])-6))
+  save(mut_signature,file = paste0("E:\\HYL\\mutational signature\\result_data\\mut_context\\",cancer_name,".Rdata"))
+  }
+
+######mutation_signature 矩阵提取----
+setwd("E:\\HYL\\mutational signature\\result_data\\mut_context")
+a<-dir()
+###特征背景数据读入，从COSMIC数据库中下载
+signatures.ref <- read.delim("E:\\HYL\\mutational signature\\COSMIC_v3.4_SBS_GRCh38.txt",
+                             header = T,row.names = 1)
+signatures.ref <- as.data.frame(t(signatures.ref))
+for (i in 3:length(a)) {
+  print(a[i])
+  load(a[i])
+  #rownames(mut_signature) <- substr(rownames(mut_signature),1,16)
+  sample_id <- as.data.frame(rownames(mut_signature))
+  clus <- makeCluster(6)
+  clusterExport(clus,"sample_id",envir = environment())
+  clusterExport(clus,"mut_signature",envir = environment())
+  clusterExport(clus,"signatures.ref",envir = environment())
+  clusterEvalQ(clus,library(deconstructSigs))
+  signature_all<-parApply(clus,sample_id, 1, function(x){
+    print(x)
+    signatures <- whichSignatures(tumor.ref = mut_signature,
+                                  signatures.ref = signatures.ref,
+                                  sample.id = x,
+                                  contexts.needed = TRUE,
+                                  signature.cutoff=0.06)
+    return(signatures)
+  })
+  stopCluster(clus)
+  names(signature_all) <- rownames(mut_signature)
+  signature_weig <- c()
+  for (j in 1:length(signature_all)) {
+    signature_weig <- rbind(signature_weig,signature_all[[j]][["weights"]])
+  }
+  save(signature_all,file = paste0("E:\\HYL\\mutational signature\\result_data\\signature_all\\",
+                                   substr(a[i],1,(nchar(a[i])-6)),"_signature_all.Rdata"))
+  save(signature_weig,file = paste0("E:\\HYL\\mutational signature\\result_data\\signature_weight\\",
+                                    substr(a[i],1,(nchar(a[i])-6)),"_signature_weig.Rdata"))
+}
+
+####cBioportal----
+######数据整合（144+110）----
+maf_data_144 <- read.delim("E:\\HYL\\mutational signature\\cBioportal\\melanoma\\mel_dfci_2019(PD-1_144)\\data_mutations.txt")
+maf_data_110 <- read.delim("E:\\HYL\\mutational signature\\cBioportal\\melanoma\\skcm_dfci_2015(CTLA-4_110)\\original\\data_mutations.txt")
+maf_data <- rbind(maf_data_144[,c("Hugo_Symbol","NCBI_Build",
+                                  "Tumor_Sample_Barcode",
+                                  "Chromosome",
+                                  "Start_Position",
+                                  "Variant_Classification",
+                                  "Reference_Allele",
+                                  "Tumor_Seq_Allele2")],
+                  maf_data_110[,c("Hugo_Symbol","NCBI_Build",
+                                  "Tumor_Sample_Barcode",
+                                  "Chromosome",
+                                  "Start_Position",
+                                  "Variant_Classification",
+                                  "Reference_Allele",
+                                  "Tumor_Seq_Allele2")])
+write.table(maf_data,"E:\\HYL\\mutational signature\\cBioportal\\melanoma\\110_144\\data_mutations.txt",sep = "\t",row.names = F)
+sur_144 <- read.delim("E:\\HYL\\mutational signature\\cBioportal\\melanoma\\mel_dfci_2019(PD-1_144)\\data_clinical_patient.txt",comment.char = "#")
+sur_110 <- read.delim("E:\\HYL\\mutational signature\\cBioportal\\melanoma\\skcm_dfci_2015(CTLA-4_110)\\original\\data_clinical_patient.txt",comment.char = "#")
+sample_144 <- read.delim("E:\\HYL\\mutational signature\\cBioportal\\melanoma\\mel_dfci_2019(PD-1_144)\\data_clinical_sample.txt",comment.char = "#")
+sur_144$PATIENT_ID <- sample_144$SAMPLE_ID[match(sur_144$PATIENT_ID,sample_144$PATIENT_ID)]
+sur_144 <- sur_144[,c("PATIENT_ID","SEX","OS_MONTHS",
+           "OS_STATUS","BR","M_STAGE")]
+sur_110 <- sur_110[,c("PATIENT_ID","SEX","OS_MONTHS",
+           "OS_STATUS","DURABLE_CLINICAL_BENEFIT","M_STAGE")]
+colnames(sur_144) <- colnames(sur_110) <-c('PATIENT_ID','SEX','OS_MONTHS','OS_STATUS','Response','M_STAGE')
+sur <- rbind(sur_144,sur_110)
+write.table(sur,"E:\\HYL\\mutational signature\\cBioportal\\melanoma\\110_144\\data_clinical_patient.txt",sep = "\t",row.names = F)
+CNV_144 <- read.delim("E:\\HYL\\mutational signature\\cBioportal\\melanoma\\mel_dfci_2019(PD-1_144)\\data_cna.txt",comment.char = "#")
+gene_symbol <- table(CNV_144[,1])
+CNV_1441 <- CNV_144[match(names(gene_symbol)[gene_symbol==1],CNV_144[,1]),]
+CNV_1442 <- CNV_144[-match(names(gene_symbol)[gene_symbol==1],CNV_144[,1]),]
+newdata <- c()
+for (i in 1:length(unique(CNV_1442[,1]))) {
+  test <- CNV_1442[which(CNV_1442[,1]%in%unique(CNV_1442[,1])[i]),]
+  newdata <- rbind(newdata,c(unique(CNV_1442[,1])[i],colSums(abs(test[,2:ncol(test)]))))
+}
+colnames(newdata)[1] <- colnames(CNV_1441)[1]
+CNV_144 <- rbind(CNV_1441,newdata)
+rownames(CNV_144) <- CNV_144[,1]
+CNV_144 <- CNV_144[,-1]
+genes <- rownames(CNV_144)
+CNV_144 <- apply(CNV_144,2,function(x){as.numeric(x)})
+rownames(CNV_144) <- genes
+CNV_144[CNV_144!=0] <- 1
+CNV_110 <- read.delim("E:\\HYL\\mutational signature\\cBioportal\\melanoma\\skcm_dfci_2015(CTLA-4_110)\\original\\data_cna.txt",comment.char = "#")
+CNV_110 <- CNV_110[-which(CNV_110[,2]%in%"."),]
+CNV_110 <- CNV_110[,-2]
+gene_symbol <- table(CNV_110[,1])
+CNV_1101 <- CNV_110[match(names(gene_symbol)[gene_symbol==1],CNV_110[,1]),]
+CNV_1102 <- CNV_110[-match(names(gene_symbol)[gene_symbol==1],CNV_110[,1]),]
+newdata <- c()
+for (i in 1:length(unique(CNV_1102[,1]))) {
+  test <- CNV_1102[which(CNV_1102[,1]%in%unique(CNV_1102[,1])[i]),]
+  newdata <- rbind(newdata,c(unique(CNV_1102[,1])[i],colSums(abs(test[,2:ncol(test)]))))
+}
+colnames(newdata)[1] <- colnames(CNV_1101)[1]
+CNV_110 <- rbind(CNV_1101,newdata)
+rownames(CNV_110) <- CNV_110[,1]
+CNV_110 <- CNV_110[,-1]
+genes <- rownames(CNV_110)
+CNV_110 <- apply(CNV_110,2,function(x){as.numeric(x)})
+rownames(CNV_110) <- genes
+CNV_110[CNV_110!=0] <- 1
+inter <- intersect(rownames(CNV_144),rownames(CNV_110))
+CNV_data <- cbind(CNV_144[inter,],CNV_110[inter,])
+write.table(CNV_data,"E:\\HYL\\mutational signature\\cBioportal\\melanoma\\110_144\\data_cna.txt",sep = "\t")
+
+
+
+
+######mutational context提取----
+###bsg根据数据选择是hg19还是hg38,TCGA参考基因组是hg38
+ref_genome <- "BSgenome.Hsapiens.UCSC.hg19"
+library(ref_genome, character.only = TRUE)
+setwd("E:\\HYL\\mutational signature\\cBioportal\\melanoma")
+a <- dir()
+for (i in 1:length(a)) {
+  print(a[i])
+  maf_data <- read.delim(paste0(".\\",a[i],"\\data_mutations.txt"))
+  mut_data <- maf_data[,c("Tumor_Sample_Barcode",
+                      "Chromosome",
+                      "Start_Position",
+                      "Reference_Allele",
+                      "Tumor_Seq_Allele2")]
+  colnames(mut_data) <- c("Sample","chr","pos","ref","alt")
+  mut_data$chr <- paste0("chr",mut_data$chr)
+  chr_fam <- paste0("chr",c(1:22,'X','Y'))
+  mut_data <- mut_data[which(mut_data$chr%in%chr_fam),]
+  mut_signature<- mut.to.sigs.input(mut.ref =mut_data, sample.id = "Sample",
+                                    chr = "chr", pos ="pos", ref = "ref", alt = "alt", bsg = BSgenome.Hsapiens.UCSC.hg19)
+  save(mut_signature,file = paste0(".\\",a[i],"\\mut_signature.Rdata"))
+}
+
+######mutation_signature 矩阵提取----
+setwd("E:\\HYL\\mutational signature\\cBioportal\\melanoma")
+a<-dir()
+###特征背景数据读入，从COSMIC数据库中下载
+signatures.ref <- read.delim("E:\\HYL\\mutational signature\\COSMIC_v3.4_SBS_GRCh37.txt",
+                             header = T,row.names = 1)
+signatures.ref <- as.data.frame(t(signatures.ref))
+for (i in 1:length(a)) {
+  print(a[i])
+  load(paste0(".\\",a[i],"\\mut_signature.Rdata"))
+  #rownames(mut_signature) <- substr(rownames(mut_signature),1,16)
+  sample_id <- as.data.frame(rownames(mut_signature))
+  clus <- makeCluster(6)
+  clusterExport(clus,"sample_id",envir = environment())
+  clusterExport(clus,"mut_signature",envir = environment())
+  clusterExport(clus,"signatures.ref",envir = environment())
+  clusterEvalQ(clus,library(deconstructSigs))
+  signature_all<-parApply(clus,sample_id, 1, function(x){
+    print(x)
+    signatures <- whichSignatures(tumor.ref = mut_signature,
+                                  signatures.ref = signatures.ref,
+                                  sample.id = x,
+                                  contexts.needed = TRUE,
+                                  signature.cutoff=0.06)
+    return(signatures)
+  })
+  stopCluster(clus)
+  names(signature_all) <- rownames(mut_signature)
+  signature_weig <- c()
+  for (j in 1:length(signature_all)) {
+    signature_weig <- rbind(signature_weig,signature_all[[j]][["weights"]])
+  }
+  save(signature_all,file = paste0(".\\",a[i],"\\signature_all.Rdata"))
+  save(signature_weig,file = paste0(".\\",a[i],"\\signature_weig.Rdata"))
+}
+
+
+#####data preprocess####
+setwd("E:\\HYL\\mutational signature\\cBioportal\\melanoma\\110_144")
+dir()
+library(ssMutPA)
+data <- read.delim("data_mutations.txt")
+mut_data <- as.data.frame(data)
+mut_status<-get_mut_status(maf_data = mut_data,nonsynonymous = T,TCGA = T)
+sur_data<- read.delim("data_clinical_patient.txt",comment.char = '#')
+rownames(sur_data)<-sur_data$PATIENT_ID
+#sur_data <- sur_data[-which(sur_data$DURABLE_CLINICAL_BENEFIT%in%"X"),]
+CNV_data <- read.delim("data_cna.txt",sep="\t")
+CNV_data <- CNV_data[-which(CNV_data[,2]%in%"."),]
+CNV_data <- CNV_data[,-2]
+gene_symbol <- table(CNV_data[,1])
+CNV_data1 <- CNV_data[match(names(gene_symbol)[gene_symbol==1],CNV_data[,1]),]
+CNV_data2 <- CNV_data[-match(names(gene_symbol)[gene_symbol==1],CNV_data[,1]),]
+newdata <- c()
+for (i in 1:length(unique(CNV_data2[,1]))) {
+  test <- CNV_data2[which(CNV_data2[,1]%in%unique(CNV_data2[,1])[i]),]
+  newdata <- rbind(newdata,c(unique(CNV_data2[,1])[i],colSums(abs(test[,2:ncol(test)]))))
+}
+colnames(newdata)[1] <- colnames(CNV_data1)[1]
+CNV_data <- rbind(CNV_data1,newdata)
+rownames(CNV_data) <- CNV_data[,1]
+CNV_data <- CNV_data[,-1]
+genes <- rownames(CNV_data)
+CNV_data <- apply(CNV_data,2,function(x){as.numeric(x)})
+rownames(CNV_data) <- genes
+CNV_data[CNV_data!=0] <- 1
+load("signature_weig.Rdata")
+signature_weig<-t(signature_weig)
+inter<- intersect(intersect(colnames(CNV_data),colnames(signature_weig)),
+                  intersect(colnames(mut_status),sur_data$PATIENT_ID))
+CNV_data<-CNV_data[,inter]
+mut_status<-mut_status[,inter]
+signature_weig<-signature_weig[,inter]
+resp_data<-as.data.frame(cbind(colnames(mut_status),(0:(ncol(mut_status)-1)),sur_data[inter,5]))
+colnames(resp_data) <- c("Sample","samp_index","Status")
+resp_data$Status <- ifelse(resp_data$Status%in%c("PR","CR","Partial Response","Complete Response"),1,0)
+mut_status<-as.data.frame(cbind(resp_data$samp_index,resp_data$Sample,
+                                t(mut_status[,match(resp_data$Sample,colnames(mut_status))])))
+colnames(mut_status)[1:2]<-c("samp_index","Sample")
+CNV_data<-as.data.frame(cbind(resp_data$samp_index,resp_data$Sample,
+                              t(CNV_data[,match(resp_data$Sample,colnames(CNV_data))])))
+colnames(CNV_data)[1:2]<-c("samp_index","Sample")
+signature_weig<-as.data.frame(cbind(resp_data$samp_index,resp_data$Sample,
+                                    t(signature_weig[,match(resp_data$Sample,colnames(signature_weig))])))
+colnames(signature_weig)[1:2]<-c("samp_index","Sample")
+write.csv(CNV_data,"CNV_data.csv",row.names = F)
+write.csv(mut_status,"mut_status.csv",row.names = F)
+write.csv(signature_weig,"signature_weig.csv",row.names = F)
+write.csv(resp_data,"resp_data.csv",row.names = F)
+
+
+#####train_valid_test####
+resp_data<-read.csv("resp_data.csv")
+rownames(resp_data)<-resp_data$Sample
+train_data<-resp_data[sample(resp_data$Sample,ceiling(nrow(resp_data)*0.7)),]
+valid_data<-resp_data[sample(setdiff(resp_data$Sample,train_data$Sample),
+                             floor(nrow(resp_data)*0.3)),]
+test_data<-resp_data[setdiff(resp_data$Sample,union(train_data$Sample,valid_data$Sample)),]
+write.csv(train_data,"train_by_response_cv00.csv",row.names = F)
+write.csv(valid_data,"valid_by_response_cv00.csv",row.names = F)
+write.csv(test_data,"test_by_response_cv00.csv",row.names = F)
