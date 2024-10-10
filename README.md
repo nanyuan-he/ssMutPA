@@ -15,7 +15,7 @@ ssMutPA is a single-sample mutation-based pathway analysis method for inferring 
 
 'ssMutPA' is a single-sample mutation-based pathway analysis method. It integrates somatic mutation data with the protein-protein interaction network and calculates single-sample mutation-based pathway enrichment score (ssMutPES) using the local weighted and global propagation strategies.
 
-![A simple schema of the labyrinth](man/figures/intro.jpg)
+![A simple schema of the labyrinth](man/figure/introduce.jpg)
 
 
 ## A notice on operating system compatibility
