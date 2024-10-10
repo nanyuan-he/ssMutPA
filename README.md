@@ -13,68 +13,17 @@ ssMutPA is a single-sample mutation-based pathway analysis method for inferring 
 
 ## Introduction
 
-'ssMutPA' is a single-sample mutation-based pathway analysis method. It integrates somatic mutation data with the protein-protein interaction network and calculates single-sample mutation-based pathway enrichment score (ssMutPES) using the local weighted and global propagation strategies.
+`ssMutPA` is a single-sample mutation-based pathway analysis method. It integrates somatic mutation data with the protein-protein interaction network and calculates single-sample mutation-based pathway enrichment score (ssMutPES) using the local weighted and global propagation strategies.
 
 ![A simple schema of the labyrinth](man/figure/introduce.jpg)
 
 
 ## A notice on operating system compatibility
 
-I developed and tested `labyrinth` on Fedora Linux version 38 and 39. While this package does not contain any operating system-specific code, it has not been tested on other operating systems. In theory, `labyrinth` should work on other Unix-like operating systems as long as the required dependencies are installed.
-
 We recommended these dependencies to be installed:
 
-- **R (≥ 4.3.0)**: We developed this R package using R version 4.3.x.
-- **Python**: Python is required for drawing plots in demos. It is recommended to have Python and `seaborn` installed, as the `reticulate` package will use the system's Python installation.
-- **OpenMP**: This package uses OpenMP for parallelization and multithreading if OpenMP exists. Having OpenMP installed can significantly improve performance.
-- **Intel oneAPI Math Kernel Library (oneMKL)**: This library can further enhance mathematical performance, especially on Intel processors. oneMKL is not required but highly recommended.
+- **R (≥ 4.0.0)**: We developed this R package using R version 4.3.0.
 
-It would takes less than ten minutes to install this package. If you encounter any issues while running this package on other operating system, please open an issue.
-
-
-## Before installation
-
-Before installation, we recommended you install Intel oneAPI Math Kernel Library (oneMKL) to optimize the computational performance of linear algebra.
-
-Windows users can download oneMKL from [Intel's website](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-download.html) and install it in the default directory. The default directory is: `C:\Program Files (x86)\Intel\oneAPI`.
-
-Debian and Ubuntu users can download oneMKL using apt in the non-free repo:
-
-``` bash
-# Install oneMKL version 2020.4.304-4
-sudo apt install intel-mkl-full
-```
-
-Or using the Intel repo:
-
-``` bash
-# Set up the repository and signed the entry
-wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-| gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
-# Update the package list
-sudo apt update
-# Install the latest oneMKL (version 2024.1)
-sudo apt install intel-oneapi-mkl
-```
-
-Fedora users can download oneMKL by using dnf:
-
-``` bash
-# Create dnf repository file
-tee > /tmp/oneAPI.repo << EOF
-[oneAPI]
-name=Intel® oneAPI repository
-baseurl=https://yum.repos.intel.com/oneapi
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-EOF
-sudo mv /tmp/oneAPI.repo /etc/yum.repos.d
-# Install the latest oneMKL (version 2024.0)
-sudo dnf install intel-oneapi-mkl
-```
 
 
 ## Installation
