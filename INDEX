@@ -1,0 +1,35 @@
+FastSEAscore            Calculate the enrichment score of the pathways
+                        .
+MRWR                    A global propagation algorithm, random walk
+                        with restart (RWR), to predict probable
+                        influence of nodes in the network by seed
+                        nodes.
+Oncoplot                Drawing a waterfall plot of a particular
+                        pathway.
+Path_ES                 Path_ES Single-sample mutation-based pathway
+                        enrichment score profiles.
+Path_Name               Path_Name
+RWR_res                 RWR_res Random walk results based on mutated
+                        genes in a single sample.
+Seeds_Score             Seeds_Score The local weight of seed nodes.
+cox_data                cox_data Univariate cox proportional hazards
+                        regression data.
+dot_data                dot_data A data frame.
+dotplot                 Plotting the Dot plot.
+get_RWR_ES              Calculate the single-sample mutation-based
+                        pathway enrichment score.
+get_heatmap             Plotting a heatmap with subtype labels.
+get_indicate            Indicator function.
+get_mut_status          Converts MAF file or data in other formats into
+                        mutation matrix.
+get_samp_class          Determining cancer subtypes using unsupervised
+                        spectral clustering algorithm.
+get_seeds_score         Calculate the local wight of seed nodes.
+get_univarCox_result    Perform the univariate Cox proportional hazards
+                        regression analysis.
+mountain_plot           Plotting the density ridges plot.
+mut_onco                mut_onco A binary mutation matrix.
+mut_status              mut_status A binary mutation matrix.
+samp_class_onco         samp_class_onco
+sample_class            sample_class The subtype labels of samples.
+sur_onco                sur_onco
