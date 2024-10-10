@@ -32,7 +32,7 @@ Install `ssMutPA` using:
 
 ``` r
 install.packages(c('devtools', 'BiocManager'))
-remotes::install_github("nanyuan-he/ssMutPA")
+devtools::install_github("nanyuan-he/ssMutPA")
 ```
 
 
