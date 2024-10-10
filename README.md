@@ -1,13 +1,13 @@
 
 # ssMutPA
 
-[![Current devel version: 0.1.1](https://img.shields.io/badge/devel%20version-0.3.0-blue.svg)](https://github.com/randef1ned/labyrinth)
+[![Current devel version: 0.1.1](https://img.shields.io/badge/devel%20version-0.1.1-blue.svg)](https://github.com/nanyuan-he/ssMutPA)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/09b138b2fa9242229f081cd180f6fc91)](https://app.codacy.com/gh/randef1ned/labyrinth/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/09b138b2fa9242229f081cd180f6fc91)](https://app.codacy.com/gh/nanyuan-he/ssMutPA/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
-[![Last commit](https://img.shields.io/github/last-commit/randef1ned/labyrinth.svg)](https://github.com/randef1ned/labyrinth/commits/master)
-[![Code size](https://img.shields.io/github/languages/code-size/randef1ned/labyrinth.svg)](https://github.com/randef1ned/labyrinth)
+[![Last commit](https://img.shields.io/github/last-commit/nanyuan-he/ssMutPA.svg)](https://github.com/nanyuan-he/ssMutPA/commits/master)
+[![Code size](https://img.shields.io/github/languages/code-size/nanyuan-he/ssMutPA.svg)](https://github.com/nanyuan-he/ssMutPA)
 
 ssMutPA is a single-sample mutation-based pathway analysis method for inferring mutation-induced pathway activity profiles.
 
