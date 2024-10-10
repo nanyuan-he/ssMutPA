@@ -28,29 +28,17 @@ We recommended these dependencies to be installed:
 
 ## Installation
 
-Install `labyrinth` using:
+Install `ssMutPA` using:
 
 ``` r
 install.packages(c('devtools', 'BiocManager'))
-remotes::install_github("hanjunwei-lab/labyrinth")
+remotes::install_github("nanyuan-he/ssMutPA")
 ```
-
-Or you can download the pre-built binary packages from [Releases](https://github.com/hanjunwei-lab/labyrinth/releases).
 
 
 ## Usage
 
-Load the package using `library(labyrinth)`. We provide a vignette for the package that can be called using: `vignette("labyrinth")`. Alternatively, you can view the online version on [GitHub](doc/labyrinth_knit.md). The examples I provided would take several minutes to run on a normal desktop computer. Basically that is all you have to know.
-
-[This documentation](doc/training_knit.md) contains information about the contents and the necessary information for training the model used in this project. The `tools/` folder contains all the code and scripts required for constructing your own model, so that you can understand the technical details. Besides, you can refer to [this documentation](doc/preface_knit.md) for the background and inspirations behind the overall workflow of `labyrinth.
+Load the package using `library(ssMutPA)`. We provide a vignette for the package that can be called using: `vignette("ssMutPA")`. 
 
 
-## Changelog
 
-Changelog: [see this](NEWS.md)
-
-<!--
-## Star history
-
-[![Star History Chart](https://api.star-history.com/svg?repos=randef1ned/labyrinth&type=Date)](https://star-history.com/#randef1ned/labyrinth&Date)
--->
