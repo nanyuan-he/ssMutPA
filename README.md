@@ -15,6 +15,7 @@ ssMutPA is a single-sample mutation-based pathway analysis method for inferring 
 
 `ssMutPA` is a single-sample mutation-based pathway analysis method. It integrates somatic mutation data with the protein-protein interaction network and calculates single-sample mutation-based pathway enrichment score (ssMutPES) using the local weighted and global propagation strategies.
 
+ssMutPA complements the current individualized pathway analysis approaches that focus on gene expression data and provide something new insight into the initiation and progression of cancer.
 ![A simple schema of the labyrinth](man/figure/introduce.jpg)
 
 
@@ -22,7 +23,8 @@ ssMutPA is a single-sample mutation-based pathway analysis method for inferring 
 
 We recommended these dependencies to be installed:
 
-- **R (≥ 4.0.0)**: We developed this R package using R version 4.3.0.
+- ** R (≥ 4.0.0)**: We developed this R package using R version 4.3.0.
+- ** When calculating single-sample mutation-based pathway activity profiles, if your computer has multiple CPU cores, you can increase the computational efficiency by setting the 'Numcore' parameter in the `get_RWR_ES` function.
 
 
 
@@ -31,14 +33,14 @@ We recommended these dependencies to be installed:
 Install `ssMutPA` using:
 
 ``` r
-install.packages(c('devtools', 'BiocManager'))
+install.packages(c('devtools','BiocManager'))
 devtools::install_github("nanyuan-he/ssMutPA")
 ```
 
 
 ## Usage
 
-Load the package using `library(ssMutPA)`. We provide a vignette for the package that can be called using: `vignette("ssMutPA")`. 
+Load the package using `library(ssMutPA)`. We provide a vignette for the package that can be called using: `vignette("ssMutPA")`. Alternatively, you can view the online version on [CRAN](https://cran.r-project.org/web/packages/ssMutPA/index.html). The examples I provided would take several minutes to run on a normal desktop computer.
 
 
 
