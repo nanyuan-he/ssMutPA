@@ -33,7 +33,7 @@ We recommended these dependencies to be installed:
 Install `ssMutPA` using:
 
 ``` r
-install.packages(c('devtools','BiocManager'))
+install.packages('devtools')
 devtools::install_github("nanyuan-he/ssMutPA")
 ```
 
